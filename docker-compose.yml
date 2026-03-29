@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+
+  # ── MLflow tracking server ─────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow-server
+    command: >
+      bash -c "pip install -q mlflow && mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri sqlite:///mlruns/mlflow.db
+        --default-artifact-root /mlruns/artifacts"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlruns:/mlruns
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ML Training pipeline ───────────────────────────────────────────
+  trainer:
+    build: .
+    container_name: ml-trainer
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./data:/app/data
+      - ./evaluation_results:/app/evaluation_results
+    command: python scripts/run_pipeline.py
+
+  # ── FastAPI model server ───────────────────────────────────────────
+  api:
+    build: .
+    container_name: ml-api
+    depends_on:
+      - trainer
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./checkpoints:/app/checkpoints
+    command: uvicorn api.serve:app --host 0.0.0.0 --port 8080 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mlruns:

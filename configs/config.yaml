@@ -1,0 +1,61 @@
+data:
+  source: "sklearn"
+  dataset_name: "breast_cancer"
+  test_size: 0.2
+  val_size: 0.1
+  random_seed: 42
+  version_dir: "data/versioned"
+
+model:
+  type: "mlp"
+  hidden_dims: [256, 128, 64]
+  dropout: 0.3
+  activation: "relu"
+
+training:
+  epochs: 10
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: "cosine"
+  distributed: false
+  num_processes: 1
+  checkpoint_dir: "checkpoints"
+  checkpoint_every: 5
+  resume_from: null
+  early_stopping_patience: 10
+
+tracking:
+  backend: local
+  log_dir: "checkpoints"
+  tags:
+    project: "ml-pipeline-demo"
+    team: "ml-engineering"
+
+evaluation:
+  results_dir: "evaluation_results"
+  metrics:
+    - accuracy
+    - f1
+    - precision
+    - recall
+    - roc_auc
+
+api:
+  host: "0.0.0.0"
+  port: 8080
+  model_dir: "checkpoints"
+
+monitoring:
+  prometheus_port: 8001
+  log_level: "INFO"
+
+tuning:
+  strategy: "grid"
+  n_trials: 6
+  param_grid:
+    learning_rate: [0.01, 0.001, 0.0001]
+    hidden_dims:
+      - [256, 128]
+      - [512, 256, 128]
+    batch_size: [32, 64]

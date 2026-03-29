@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+checkpoints/
+evaluation_results/
+data/versioned/
